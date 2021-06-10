@@ -1,0 +1,26 @@
+FROM maven:3-jdk-11 AS builderjetty
+
+COPY pom.xml /app/
+COPY src /app/src/
+
+WORKDIR /app
+RUN mvn --batch-mode --define java.net.useSystemProxies=true package
+
+########################################################################################
+
+FROM jetty:9.4-jre11
+MAINTAINER D.Ducatel
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends graphviz fonts-noto-cjk && \
+    rm -rf /var/lib/apt/lists/* \
+    /generate-jetty-start.sh
+
+USER jetty
+
+ENV GRAPHVIZ_DOT=/usr/bin/dot
+
+ARG BASE_URL=ROOT
+COPY --from=builderjetty /app/target/plantuml.war /var/lib/jetty/webapps/$BASE_URL.war
